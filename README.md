@@ -22,4 +22,5 @@ Optionally include annotated headers, Neo4j-friendly imports, and relationship C
 ### How to run
 
 Run the script with the DBLP XML file, its DTD, and a base output filename:
+
 `python dblp_to_csv.py dblp.xml dblp.dtd out.csv --relations author:authored_by --annotate --neo4j`
