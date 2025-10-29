@@ -74,7 +74,7 @@ repo/
    Save to: `data/hiring/faculty_raw.csv`
 
 3. **University rankings [3]**  
-   Download department ranks from CSRankings ([https://csrankings.org/][https://csrankings.org/])
+   Download department ranks from CSRankings ([https://csrankings.org/][https://csrankings.org/]).
    Save to: `data/university_ranking/csrankings.csv`
 
 4. **Where files end up**  
