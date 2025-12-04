@@ -39,6 +39,7 @@ repo/
 ├─ scripts/
 │  ├─ collect_data/
 │  │  ├─ XMLToCSV.py
+│  │  ├─ scrape.py
 │  │  └─ format_dblp.py
 │  ├─ models/
 │  │  ├─ GAT.py
@@ -70,14 +71,14 @@ repo/
    Save to: `data/coauthorship/dblp_raw/dblp.dtd` and `data/coauthorship/dblp_raw/dblp.xml`
 
 2. **Faculty Data [2]**  
-   Download computer-science faculty roster from Jeff Huang’s Computer Science Open Data ([https://jeffhuang.com/computer-science-open-data/[https://jeffhuang.com/computer-science-open-data/]).  
-   Save to: `data/hiring/faculty_raw.csv`
+   Use `scrape.py` to collect the faculty dataset from Jeff Huang's CS Professors page ([https://drafty.cs.brown.edu/csprofessors]).
+   Saves to: `data/hiring/faculty.py`
 
-3. **University rankings [3]**  
+4. **University rankings [3]**  
    Download department ranks from CSRankings ([https://csrankings.org/][https://csrankings.org/]).
    Save to: `data/university_ranking/csrankings.csv`
 
-4. **Where files end up**  
+5. **Where files end up**  
    - `XMLToCSV.py` writes per-element CSVs to `data/coauthorship/dblp_raw/`.  
    - `format_dblp.py` reads those CSVs, plus the faculty data and rankings, and writes cleaned tables:
      - `data/coauthorship/dblp_clean/full_by_author.csv`, `data/coauthorship/dblp_cleaned/full_by_paper.csv`
@@ -89,6 +90,8 @@ repo/
 Run from `scripts/`:
 
 ### 1) Collect Data
+- **Scrape faculty data** `collect_data/scrape.py`
+   Scrapes Jeff Huang's CS Professors data to save faculty data.
 - **DBLP to CSVs:** `collect_data/XMLToCSV.py`  
    Parses DBLP XML with DTD and writes per-element CSVs
 - **Clean & integrate:** `collect_data/format_dblp.py`  
@@ -124,6 +127,11 @@ Run from `scripts/`:
 ## Script Details & Usage
 
 Each script can be run independently once its inputs exist. Example commands:
+
+#### Scrape faculty data
+```
+python collect_data/scrape.py
+```
 
 #### Collect & format DBLP
 ```
