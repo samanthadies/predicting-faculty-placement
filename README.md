@@ -40,6 +40,7 @@ repo/
 │  ├─ collect_data/
 │  │  ├─ XMLToCSV.py
 │  │  ├─ scrape.py
+│  │  ├─ infer_gender.py
 │  │  └─ format_dblp.py
 │  ├─ models/
 │  │  ├─ GAT.py
@@ -96,6 +97,10 @@ Run from `scripts/`:
    Parses DBLP XML with DTD and writes per-element CSVs
 - **Clean & integrate:** `collect_data/format_dblp.py`  
    Merges DBLP, faculty data, and rankings. Produces author-level and faculty tables
+- **Gender label** `collect_data/infer_gender.py`
+   Infers gender using labels from SOTA proprietary APIs, Gender-API [4] and genderize.io [5].
+   If Gender-API and genderize.io both have confidence >= 0.8 and agree, we use that gender label.
+   Otherwise, we manually label the gender.
 
 ### 2) Format Data
 - **Build graphs & splits:** `build_graph.py`  
@@ -209,6 +214,8 @@ output/
 [1] DBLP Computer Science Bibliography. [https://dblp.org/xml/release/dblp-2023-1-03.xml.gz](https://dblp.org/xml/release/dblp-2023-1-03.xml.gz) (2023).  
 [2] Huang, J. Computer Science Open Data. [https://jeffhuang.com/computer-science-open-data/](https://jeffhuang.com/computer-science-open-data/) (2022).  
 [3] Berger, E. D. CSRankings. [https://csrankings.org/](https://csrankings.org/) (2023).
+[4] [https://gender-api.com](https://gender-api.com)
+[5] [https://genderize.io](https://genderize.io)
 
 If you use this codebase or reproduce its analyses, please cite:
 > Dies, Samantha, David Liu, and Tina Eliassi-Rad. *Forecasting Faculty Placement from Patterns in Co-authorship Networks*.
