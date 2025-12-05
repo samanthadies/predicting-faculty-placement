@@ -219,6 +219,7 @@ def format_author_level(df, faculty):
 
     # add info about faculty
     df_faculty = get_faculty_indicators(df_faculty)
+    df_faculty = get_academic_age(df_faculty)
 
     print(df_faculty.info())
 
@@ -271,12 +272,48 @@ def get_faculty_indicators(fac_df):
     Add year-wise faculty indicators: fac_{year} = 1 if join_year <= year else 0.
 
     :param fac_df: Faculty dataframe with 'join_year' column (pd.DataFrame)
-    :return: Faculty dataframe with added indicator columns fac_2010..fac_2020 (pd.DataFrame)
+    :return: Faculty dataframe with added indicator columns fac_2010...fac_2020 (pd.DataFrame)
     """
     # add indicator-columns which capture whether they're faculty in a given year
     for year in range(2010, 2021):
         col_name = f'fac_{year}'
         fac_df[col_name] = (fac_df['join_year'] <= year).astype(int)
+
+    return fac_df
+
+
+def get_academic_age(fac_df):
+    """
+    Add year-wise academic age indicators: academic_age_{year} = year - phd_year if phd_year <= year, else -1.
+
+    :param fac_df: Faculty dataframe (pd.DataFrame)
+    :return: Faculty dataframe with added academic_age columns academic_age_2010...academic_age_2020 (pd.DataFrame)
+    """
+    # Make sure phd_year and join_year are numeric
+    fac_df["phd_year"] = pd.to_numeric(fac_df["phd_year"], errors="coerce")
+    fac_df["join_year"] = pd.to_numeric(fac_df["join_year"], errors="coerce")
+
+    for year in range(2010, 2021):
+        fac_col = f"fac_{year}"
+        age_col = f"academic_age_{year}"
+
+        phd = fac_df["phd_year"]
+        join = fac_df["join_year"]
+        fac = fac_df[fac_col]
+
+        # Start with -1 everywhere (pre-PhD / unknown)
+        age = pd.Series(-1, index=fac_df.index, dtype="Int64")
+
+        # Have a known PhD year, and it's already been granted: use year - phd_year
+        mask_has_phd_and_reached = phd.notna() & (phd <= year)
+        age[mask_has_phd_and_reached] = (year - phd)[mask_has_phd_and_reached]
+
+        # No PhD year, but already faculty in this year: use join_year as proxy
+        mask_no_phd_but_faculty = phd.isna() & (fac == 1) & join.notna()
+        age[mask_no_phd_but_faculty] = (year - join)[mask_no_phd_but_faculty]
+
+        # Everyone else stays at -1
+        fac_df[age_col] = age
 
     return fac_df
 
