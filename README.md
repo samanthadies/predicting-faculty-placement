@@ -212,10 +212,14 @@ output/
 ## Citations & Acknowledgements
 
 [1] DBLP Computer Science Bibliography. [https://dblp.org/xml/release/dblp-2023-1-03.xml.gz](https://dblp.org/xml/release/dblp-2023-1-03.xml.gz) (2023).  
+
 [2] Huang, J. Computer Science Open Data. [https://jeffhuang.com/computer-science-open-data/](https://jeffhuang.com/computer-science-open-data/) (2022).  
+
 [3] Berger, E. D. CSRankings. [https://csrankings.org/](https://csrankings.org/) (2023).
-[4] [https://gender-api.com](https://gender-api.com)
-[5] [https://genderize.io](https://genderize.io)
+
+[4] [https://gender-api.com](https://gender-api.com).
+
+[5] [https://genderize.io](https://genderize.io).
 
 If you use this codebase or reproduce its analyses, please cite:
 > Dies, Samantha, David Liu, and Tina Eliassi-Rad. *Forecasting Faculty Placement from Patterns in Co-authorship Networks*.
