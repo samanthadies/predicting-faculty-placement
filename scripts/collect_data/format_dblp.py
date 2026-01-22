@@ -24,7 +24,7 @@ Notes:
 - Ranking-based label y: 0 (top 1–10), 1 (11–50), 2 (>50).
 - Uses `tqdm.pandas()` to show progress when scanning authors.
 
-10/24/2025 — SD
+12/11/2025 — SD
 """
 
 import warnings

@@ -14,7 +14,7 @@ Conventions
 - Labels are repeated across time (no time-varying y).
 - Masks: train/val are time-constant; test is time-specific for (2018, 2019, 2020 hires).
 
-10/24/2025 — SD
+1/13/2026 — SD
 """
 
 import numpy as np
@@ -107,8 +107,8 @@ def build_feature_snapshots(selected_features, faculty_df, years):
     For each year:
       - Collect all static columns for `selected_features`.
       - Collect temporal columns by formatting '<feat>_{year}' for each temporal feat.
-      - hstack [static, temporal] → (n_nodes, n_features_this_year)
-      - L2-normalize rows.
+      - hstack [static, temporal] to (n_nodes, n_features_this_year)
+      - Normalize rows.
 
     :param selected_features: Feature families or column names. Temporal families must exist as '<feat>_{year}' (Sequence[str])
     :param faculty_df: Master faculty features table containing static and/or temporal columns (pd.DataFrame)
@@ -122,7 +122,12 @@ def build_feature_snapshots(selected_features, faculty_df, years):
     # Heuristic: if any column starts with "<feat>_", we treat feat as temporal family
     for feat in selected_features:
         if any(faculty_df.columns.str.startswith(f"{feat}_")):
-            temporal_features.append(feat)
+
+            # gender also has 'gender_string', so treat as static
+            if feat != 'gender':
+                temporal_features.append(feat)
+            else:
+                static_features.append(feat)
         else:
             # Treat as static column name
             static_features.append(feat)

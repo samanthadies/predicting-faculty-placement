@@ -1,1 +1,3 @@
 doctoral_ranking
+gender
+academic_age

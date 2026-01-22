@@ -16,7 +16,7 @@ Bibliometric feature construction from bipartite and author-level DBLP tables.
 
 3) Merge into faculty.csv in-place.
 
-10/26/2025 — SD
+1/13/2026 — SD
 """
 
 import numpy as np
@@ -212,6 +212,88 @@ def get_bibliometric_features():
     return all_features
 
 
+def add_citation_cum_pre_features(faculty_df):
+    """
+    Add cum_num_citations and pre_num_citations directly from citations_<year> columns.
+
+    :param faculty_df: faculty-level dataframe
+    :return: dataframe with new citation columns
+    """
+
+    df = faculty_df.copy()
+
+    df["cum_num_citations"] = 0.0
+    df["pre_num_citations"] = -1.0
+
+    def get_cit(row, year):
+        col = f"citations_{year}"
+        val = row.get(col, 0.0)
+        return float(val) if pd.notna(val) else 0.0
+
+    for idx, row in df.iterrows():
+        jy = row.get("join_year")
+        if pd.isna(jy):
+            continue
+
+        try:
+            jy = int(jy)
+        except Exception:
+            continue
+
+        if 2012 <= jy <= 2020:
+            c_prev = get_cit(row, jy - 1)
+            c_prev2 = get_cit(row, jy - 2)
+            df.at[idx, "cum_num_citations"] = c_prev
+            df.at[idx, "pre_num_citations"] = max(0.0, c_prev - c_prev2)
+
+        elif jy == 2011:
+            df.at[idx, "cum_num_citations"] = get_cit(row, 2010)
+            df.at[idx, "pre_num_citations"] = -1.0
+
+        else:
+            df.at[idx, "cum_num_citations"] = get_cit(row, 2020)
+            df.at[idx, "pre_num_citations"] = -1.0
+
+    return df
+
+
+def add_academic_age_pre_features(faculty_df):
+    """
+    Add pre_academic_age directly from academic_age_<year> columns.
+
+    :param faculty_df: faculty-level dataframe
+    :return: dataframe with new academic age column
+    """
+
+    df = faculty_df.copy()
+
+    df["pre_academic_age"] = -1.0
+
+    def get_ac_age(row, year):
+        col = f"academic_age_{year}"
+        val = row.get(col, -1.0)
+        return float(val) if pd.notna(val) else -1.0
+
+    for idx, row in df.iterrows():
+        jy = row.get("join_year")
+        if pd.isna(jy):
+            continue
+
+        try:
+            jy = int(jy)
+        except Exception:
+            continue
+
+        if 2011 <= jy <= 2020:
+            a_prev = get_ac_age(row, jy - 1)
+            df.at[idx, "pre_academic_age"] = a_prev
+
+        else:
+            df.at[idx, "pre_academic_age"] = -1.0
+
+    return df
+
+
 def convert_to_usable(all_features):
     """
     Convert per-year features to:
@@ -296,6 +378,12 @@ def convert_to_usable(all_features):
     faculty_df = faculty_df.set_index('author')
     faculty_df = faculty_df.join(cum_df).join(pre_df)
     faculty_df = faculty_df.reset_index()
+
+    # Add citation-derived features without altering the per-year all_features pipeline
+    faculty_df = add_citation_cum_pre_features(faculty_df)
+
+    # Add academic age features
+    faculty_df = add_academic_age_pre_features(faculty_df)
 
     faculty_df = faculty_df.fillna(0)
 

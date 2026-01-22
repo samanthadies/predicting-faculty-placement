@@ -34,7 +34,7 @@ Notes:
 - Non-cumulative year 2010 includes all papers with year ≤ 2010 (bootstrap year);
   later non-cumulative years include only papers with year == YEAR.
 
-10/24/2025 — SD
+1/13/2026 — SD
 """
 
 import warnings
@@ -207,7 +207,7 @@ def main():
 
         1) Generate consistent train/test splits for ML.
         1) Read author-level paper data and faculty roster.
-        2) Build & save non-cumulative and cumulative author×paper matrices.
+        2) Build & save non-cumulative and cumulative author x paper matrices.
         3) Build & save non-cumulative and cumulative coauthorship adjacency.
 
     :return: None

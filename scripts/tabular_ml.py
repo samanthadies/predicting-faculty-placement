@@ -15,7 +15,7 @@ I/O:
     ../output/experiment_summary.csv
     ../output/repeat_results.csv
 
-10/29/2025 - SD
+1/22/2026 - SD
 """
 
 import pandas as pd
@@ -292,13 +292,13 @@ def format_train_test(train_path='../data/hiring/faculty_train.csv', val_path='.
 
     # build train and test data
     X_train = build_X(train_df)
-    y_train = train_df['y_bin'].astype(int).to_numpy
+    y_train = train_df['y_bin'].astype(int).to_numpy()
 
     X_val = build_X(val_df)
-    y_val = val_df['y_bin'].astype(int).to_numpy
+    y_val = val_df['y_bin'].astype(int).to_numpy()
 
     X_test = build_X(test_df)
-    y_test = test_df['y_bin'].astype(int).to_numpy
+    y_test = test_df['y_bin'].astype(int).to_numpy()
 
     # create data dict (formatted for binary labels)
     data = {
@@ -616,7 +616,7 @@ def run_all_experiments(config_list, save_dir='../output', top=10):
 
         avg_f1 = np.mean(list(per_class_f1.values()))
 
-        if key not in best_config_results or avg_f1 > best_config_results[key]['avg_val_f1']:
+        if key not in best_config_results or avg_f1 > best_config_results[key]['avg_test_f1']:
             best_config_results[key] = {
                 'config': config,
                 'avg_test_f1': avg_f1,

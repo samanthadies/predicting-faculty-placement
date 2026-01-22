@@ -3,7 +3,7 @@ plot.py
 
 This script generates the plots present in the paper.
 
-10/29/2025 - SD
+1/22/2026 - SD
 """
 
 import numpy as np
@@ -14,7 +14,6 @@ import seaborn as sns
 import matplotlib.gridspec as grid_spec
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-from matplotlib.gridspec import GridSpec
 import matplotlib.patches as patches
 
 import explicit_baselines
@@ -69,7 +68,7 @@ feature_colors = [
         "#5a9e8c",  # CV+Biblio: slate teal
         "#a36f9a",  # CV+Graph: dusty plum
         "#7c6ab2",  # Biblio+Graph: royal lavender
-        "#a8a29e"  # CV+Biblio+Graph: earthy gray
+        "#a8a29e"   # CV+Biblio+Graph: earthy gray
     ]
 
 ordered_models = [
@@ -97,13 +96,13 @@ pretty_model_labels = {
 }
 
 pretty_feature_labels = {
-        'cv': 'PhD Rank',
+        'cv': 'CV',
         'biblio': 'Bibliometric',
         'graph': 'Co-authorship',
-        'cv+biblio': 'PhD\n+\nBibliometric',
-        'cv+graph': 'PhD Rank\n+\nCo-authorship',
+        'cv+biblio': 'CV\n+\nBibliometric',
+        'cv+graph': 'CV\n+\nCo-authorship',
         'biblio+graph': 'Bibliometric\n+\nCo-authorship',
-        'cv+biblio+graph': 'PhD Rank\n+\nBibliometric\n+\nCo-authorship'
+        'cv+biblio+graph': 'CV\n+\nBibliometric\n+\nCo-authorship'
     }
 
 
@@ -277,7 +276,7 @@ def get_bar_plot(df, random_guessing, avg_neighbor, from_phd, top=10):
     bar_width = group_width / max_models
 
     fig_width = 7.2  # in inches
-    aspect_ratio = 8 / 15  # from original figsize
+    aspect_ratio = 8 / 15
     fig_height = fig_width * aspect_ratio
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
@@ -309,73 +308,35 @@ def get_bar_plot(df, random_guessing, avg_neighbor, from_phd, top=10):
 
     # Text annotations
     if top == 10:
-        arrow_xy = (0.7, 0.45)
-        xytext = (0, 0.4)
-        better_x = 0.38
-        better_y = 0.435
 
-        ax.text(2.6, 0.49, 'Avg. PR-AUC of 0.424', va='center', ha='right', fontsize=8)
+        ax.text(2.7, 0.49, 'Avg. PR-AUC of 0.428', va='center', ha='right', fontsize=8)
         circle = patches.Ellipse(
-            (2.3235, 0.424), width=0.3, height=0.035, transform=ax.transData, linewidth=1.5,
+            (1.675, 0.428), width=0.3, height=0.035, transform=ax.transData, linewidth=1.5,
             edgecolor='black', facecolor='none', linestyle='-'
         )
         ax.add_patch(circle)
         ax.annotate(
             '',
-            xy=(2.25, 0.435),
-            xytext=(1.9, 0.48),
+            xy=(1.81, 0.44),
+            xytext=(2.1, 0.48),
             arrowprops=dict(arrowstyle='->', color='black'),
             ha='center', va='center',
         )
 
-        ax.text(6.2, 0.50, 'Avg. PR-AUC of 0.458', va='center', ha='right', fontsize=8)
+        ax.text(6.3, 0.54, 'Avg. PR-AUC of 0.487', va='center', ha='right', fontsize=8)
         circle = patches.Ellipse(
-            (5.9335, 0.458), width=0.3, height=0.035,  # same idea here
+            (6.2, 0.49), width=0.3, height=0.035,
             transform=ax.transData,
             linewidth=1.5, edgecolor='black', facecolor='none', linestyle='-'
         )
         ax.add_patch(circle)
         ax.annotate(
             '',
-            xy=(5.85, 0.465),
-            xytext=(5.5, 0.49),
+            xy=(6.1, 0.5),
+            xytext=(5.7, 0.53),
             arrowprops=dict(arrowstyle='->', color='black'),
             ha='center', va='center',
         )
-    elif top == 20:
-        arrow_xy = (0.5, 0.63)
-        xytext = (0.5, 0.59)
-        better_x = 0.45
-        better_y = 0.61
-    elif top == 30:
-        arrow_xy = (0.5, 0.77)
-        xytext = (0.5, 0.71)
-        better_x = 0.45
-        better_y = 0.74
-    elif top == 40:
-        arrow_xy = (0.6, 0.91)
-        xytext = (0.6, 0.85)
-        better_x = 0.55
-        better_y = 0.88
-    elif top == 50:
-        arrow_xy = (0.6, 0.97)
-        xytext = (0.6, 0.91)
-        better_x = 0.55
-        better_y = 0.94
-    else:
-        arrow_xy = (0.5, 0.49)
-        xytext = (0.5, 0.45)
-        better_x = 0.45
-        better_y = 0.47
-
-    ax.annotate(
-        '',
-        xy=arrow_xy,
-        xytext=xytext,
-        arrowprops=dict(arrowstyle='->', color='black'),
-        ha='center', va='center',
-    )
-    ax.text(better_x, better_y, 'Better', va='center', ha='right')
 
     ax.text(
         -0.02, 1.075,
@@ -475,78 +436,42 @@ def get_box_plot(df, random_guessing, avg_neighbor, from_phd, top=10):
     ax.set_ylabel("PR-AUC")
     ax.set_xlabel("")
 
-    if top == 10:
+    if top is None:
         ax.set_ylim([0.15, 0.5])
-    elif top == 20 or top == 30:
+    elif top is 10:
+        ax.set_ylim([0.0, None])
+    elif top == 20:
+        ax.set_ylim([0.15, 0.7])
+    elif top == 30:
         ax.set_ylim([0.15, 0.85])
     elif top == 40 or top == 50:
         ax.set_ylim([0.15, 1.0])
 
     # add text annotations
     if top == 10:
-        arrow_xy = (0.5, 0.485)
-        xytext = (0.5, 0.46)
-        better_x = 0.45
-        better_y = 0.47
-
         ax.text(6.5, random_guessing - 0.005, 'Random Guessing', va='top', ha='right', style='italic')
         ax.text(6.5, avg_neighbor - 0.005, 'By Avg. Co-author Rank', va='top', ha='right', style='italic')
         ax.text(6.5, from_phd - 0.005, 'By PhD Rank', va='top', ha='right', style='italic')
 
     elif top == 20:
-        arrow_xy = (0.5, 0.77)
-        xytext = (0.5, 0.72)
-        better_x = 0.45
-        better_y = 0.74
-
         ax.text(6.5, random_guessing + 0.005, 'Random Guessing', va='bottom', ha='right', style='italic')
         ax.text(6.5, avg_neighbor - 0.005, 'By Avg. Co-author Rank', va='top', ha='right', style='italic')
         ax.text(6.5, from_phd + 0.005, 'By PhD Rank', va='bottom', ha='right', style='italic')
 
     elif top == 30:
-        arrow_xy = (0.5, 0.77)
-        xytext = (0.5, 0.72)
-        better_x = 0.45
-        better_y = 0.74
-
         ax.text(6.5, random_guessing - 0.005, 'Random Guessing', va='top', ha='right', style='italic')
         ax.text(6.5, avg_neighbor - 0.005, 'By Avg. Co-author Rank', va='top', ha='right', style='italic')
         ax.text(6.5, from_phd + 0.005, 'By PhD Rank', va='bottom', ha='right', style='italic')
 
     elif top == 40:
-        arrow_xy = (0.6, 0.92)
-        xytext = (0.6, 0.86)
-        better_x = 0.55
-        better_y = 0.88
-
         ax.text(6.49, random_guessing - 0.005, 'Random\nGuessing', va='top', ha='right', style='italic')
         ax.text(6.5, avg_neighbor - 0.005, 'By Avg. Co-author Rank', va='top', ha='right', style='italic')
         ax.text(6.5, from_phd + 0.005, 'By PhD Rank', va='bottom', ha='right', style='italic')
 
     elif top == 50:
-        arrow_xy = (0.6, 0.98)
-        xytext = (0.6, 0.91)
-        better_x = 0.55
-        better_y = 0.94
-
         ax.text(6.5, random_guessing - 0.005, 'Random Guessing', va='top', ha='right', style='italic')
         ax.text(6.5, avg_neighbor - 0.005, 'By Avg. Co-author Rank', va='top', ha='right', style='italic')
         ax.text(6.5, from_phd + 0.005, 'By PhD Rank', va='bottom', ha='right', style='italic')
-
-    else:
-        arrow_xy = (0.5, 0.48)
-        xytext = (0.5, 0.46)
-        better_x = 0.45
-        better_y = 0.47
-
-    ax.annotate(
-        '',
-        xy=arrow_xy,
-        xytext=xytext,
-        arrowprops=dict(arrowstyle='->', color='black'),
-        ha='center', va='center',
-    )
-    ax.text(better_x, better_y, 'Better', va='center', ha='right')
 
     ax.text(
         -0.02, 1.075,
@@ -584,25 +509,13 @@ def summary_line_plot(dfs):
         ('cv+biblio', 'cv+biblio+graph')
     ]
     labels_main = {
-        ('cv', 'cv+graph'): 'PhD+Co-author vs. PhD',
+        ('cv', 'cv+graph'): 'CV+Co-author vs. CV',
         ('biblio', 'biblio+graph'): 'Bib+Co-author vs. Bib',
-        ('cv+biblio', 'cv+biblio+graph'): 'PhD+Bib+Co-author vs. PhD+Bib'
+        ('cv+biblio', 'cv+biblio+graph'): 'CV+Bib+Co-author vs. CV+Bib'
     }
     colors_main = ["#b6655e", "#aa7d17", "#427073"]
     markers_main = ['o', 's', '^']
     valid_sets_main = ['cv', 'biblio', 'cv+graph', 'biblio+graph', 'cv+biblio', 'cv+biblio+graph']
-
-    comparisons_alt = [
-        ('biblio', 'cv'),
-        ('biblio+graph', 'cv+graph')
-    ]
-    labels_alt = {
-        ('biblio', 'cv'): 'PhD vs. Bib',
-        ('biblio+graph', 'cv+graph'): 'PhD+Co-author vs. Bib+Co-author',
-    }
-    colors_alt = ["#984c88", "#6c3d6e"]
-    markers_alt = ['o', 's']
-    valid_sets_alt = ['cv', 'biblio', 'cv+graph', 'biblio+graph']
 
     # Calculate the differences in PR-AUC between comparison feature sets
     def compute_deltas(dfs, comparisons, valid_sets):
@@ -630,12 +543,11 @@ def summary_line_plot(dfs):
         return delta_pr_auc, ci_lowers, ci_uppers
 
     deltas_main_no, lows_main_no, highs_main_no = compute_deltas(dfs, comparisons_main, valid_sets_main)
-    deltas_alt_no, lows_alt_no, highs_alt_no = compute_deltas(dfs, comparisons_alt, valid_sets_alt)
 
     # Set up figure
-    fig = plt.figure(figsize=(7.2, 3.5))
-    gs = GridSpec(3, 2, height_ratios=[0.05, 1, 0.25], hspace=0.75, wspace=0.4)
-    axs = [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
+    fig = plt.figure(figsize=(6, 3))
+    gs = grid_spec.GridSpec(3, 1, height_ratios=[0.05, 1, 0.25], hspace=0.75, wspace=0.4)
+    axs = [fig.add_subplot(gs[1, 0])]
 
     # Plot the differential between different features and annotate with a * if it's significantly different
     def plot_delta(ax, deltas, lowers, uppers, comparisons, labels, markers, colors, significance_flags):
@@ -663,92 +575,38 @@ def summary_line_plot(dfs):
     # Plot (significance flags from stats results)
     plot_delta(axs[0], deltas_main_no, lows_main_no, highs_main_no, comparisons_main, labels_main, markers_main, colors_main,
                {
-                   ('cv', 'cv+graph'): [1,0,0,0,0],
-                   ('biblio', 'biblio+graph'): [1,0,1,0,0],
+                   ('cv', 'cv+graph'): [1,1,1,1,0],
+                   ('biblio', 'biblio+graph'): [1,0,0,0,0],
                    ('cv+biblio', 'cv+biblio+graph'): [1,0,0,0,0]
-               })
-    plot_delta(axs[1], deltas_alt_no, lows_alt_no, highs_alt_no, comparisons_alt, labels_alt, markers_alt, colors_alt,
-               {
-                   ('biblio', 'cv'): [1,0,1,0,0],
-                   ('biblio+graph', 'cv+graph'): [0,0,1,0,0],
                })
 
     axs[0].set_ylim([-0.03, 0.125])
-    axs[1].set_ylim([-0.075, 0.08])
 
     # Titles
     title_ax = fig.add_subplot(gs[0, :])
     title_ax.axis("off")
-    title_ax.text(-0.115, 0, 'Performance differences between feature sets for various definitions of "high-rank"',
+    title_ax.text(-0.115, 0, 'Performance differences across definitions of "high-rank"',
                   fontsize=10, fontweight='bold', ha='left', va='top', color='#333333',
                   transform=title_ax.transAxes)
-
-    panel_labels = ['(a)', '(b)']
-    for ax, label in zip(axs, panel_labels):
-        ax.text(-0.2, 1.15, label, transform=ax.transAxes, fontsize=10, fontweight='bold', va='top', ha='left', color='#444444')
-
-    axs[0].text(-0.1, 1.08, "Adding Co-author Features", fontweight='bold', fontsize=9, color='#444444', transform=axs[0].transAxes)
-    axs[1].text(-0.1, 1.08, "PhD Rank vs. Bibliometric Features", fontweight='bold', fontsize=9, color='#444444', transform=axs[1].transAxes)
 
     # Annotations
     axs[0].annotate(
         '',
-        xy=(9, 0.078),
-        xytext=(9, 0.053),
+        xy=(11, 0.082),
+        xytext=(21, 0.098),
         arrowprops=dict(arrowstyle='->', color='gray'),
-        ha='center', va='center',
+        ha='left', va='center',
         # fontsize=8
     )
-    axs[0].text(10, 0.063, 'Better with\nCo-author Feats.', va='center', ha='left', fontsize=6, color='#666666')
-
     axs[0].annotate(
         '',
-        xy=(9, -0.025),
-        xytext=(9, -0.001),
+        xy=(20, 0.051),
+        xytext=(21, 0.099),
         arrowprops=dict(arrowstyle='->', color='gray'),
-        ha='center', va='center',
-    )
-    axs[0].text(10, -0.014, 'Worse with\nCo-author Feats.', va='center', ha='left', fontsize=6, color='#666666')
-
-    axs[0].annotate(
-        '',
-        xy=(31, 0.075),
-        xytext=(40, 0.088),
-        arrowprops=dict(arrowstyle='->', color='gray'),
-        ha='center', va='center',
+        ha='left', va='center',
         # fontsize=8
     )
-    axs[0].text(44, 0.092, 'Significant', va='top', ha='center', fontsize=6, color='#666666')
-
-    axs[1].annotate(
-        '',
-        xy=(9, 0.035),
-        xytext=(9, 0.005),
-        arrowprops=dict(arrowstyle='->', color='gray'),
-        ha='center', va='center',
-        # fontsize=8
-    )
-    axs[1].text(10, 0.018, 'PhD Rank$>$\nBib Feats.', va='center', ha='left', fontsize=6, color='#666666')
-
-    axs[1].annotate(
-        '',
-        xy=(24, -0.035),
-        xytext=(24, -0.005),
-        arrowprops=dict(arrowstyle='->', color='gray'),
-        ha='center', va='center',
-        # fontsize=8
-    )
-    axs[1].text(25, -0.018, 'Bib Feats.$>$\nPhD Rank', va='center', ha='left', fontsize=6, color='#666666')
-
-    axs[1].annotate(
-        '',
-        xy=(31, 0.067),
-        xytext=(39, 0.073),
-        arrowprops=dict(arrowstyle='->', color='gray'),
-        ha='center', va='center',
-        # fontsize=8
-    )
-    axs[1].text(43, 0.078, 'Significant', va='top', ha='center', fontsize=6, color='#666666')
+    axs[0].text(18.5, 0.105, 'Significant', va='center', ha='left', fontsize=7, color='#666666')
 
     # Legend
     legend_ax = fig.add_subplot(gs[2, :])
@@ -757,8 +615,6 @@ def summary_line_plot(dfs):
         Patch(facecolor=colors_main[0], edgecolor=colors_main[0], label=labels_main[('cv', 'cv+graph')]),
         Patch(facecolor=colors_main[2], edgecolor=colors_main[2], label=labels_main[('cv+biblio', 'cv+biblio+graph')]),
         Patch(facecolor=colors_main[1], edgecolor=colors_main[1], label=labels_main[('biblio', 'biblio+graph')]),
-        Patch(facecolor=colors_alt[0], edgecolor=colors_alt[0], label=labels_alt[('biblio', 'cv')]),
-        Patch(facecolor=colors_alt[1], edgecolor=colors_alt[1], label=labels_alt[('biblio+graph', 'cv+graph')]),
     ]
     legend_ax.legend(
         handles=legend_elements,
@@ -795,7 +651,7 @@ def rewire(random_guessing, avg_neighbor, from_phd):
     baseline_df = baseline_df[baseline_df['target_class'] == 0]
 
     # Set up annotations
-    titles = ['PhD  + Co-author', 'Bib + Co-author', 'PhD + Bib + Co-author']
+    titles = ['CV  + Co-author', 'Bib + Co-author', 'CV + Bib + Co-author']
     feature_sets = ['cv', 'biblio', 'cv+biblio']
     abc = ['(a)', '(b)', '(c)']
     models = ['GCN', 'GAT', 'GraphSAGE', 'GConvGRU']
@@ -848,16 +704,15 @@ def rewire(random_guessing, avg_neighbor, from_phd):
         for model in models:
             subset = df[(df['feature_set'] == feature) & (df['model_name'] == model)]
 
-            def compute_ci(group, ci=90):
-                pr_aucs = group['pr_auc'].values
-                mean = np.mean(pr_aucs)
-                lower, upper = ci_bounds(pr_aucs, ci=ci)
-                return pd.Series({'mean': mean, 'lower': lower, 'upper': upper})
-
-            grouped = subset.groupby('percent').apply(compute_ci).reset_index()
+            grouped = (
+                subset.groupby("percent", sort=True)["pr_auc"]
+                .agg(mean="mean", lower=lambda s: ci_bounds(s.to_numpy(), ci=90)[0],
+                     upper=lambda s: ci_bounds(s.to_numpy(), ci=90)[1])
+                .reset_index()
+            )
 
             baseline_subset = baseline_df[
-                (baseline_df['model_name'] == model) &
+                (baseline_df['model'] == model) &
                 (baseline_df['feature_set'] == feature)
                 ]
 

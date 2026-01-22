@@ -6,26 +6,37 @@ Graph machine learning modeling pipeline for faculty placement prediction. This 
 2) Trains temporal graph models (with hyperparameter search)
 3) Allows for different definitions of high-rank
 4) Saves the best models and summaries of the results
+5) Runs experiments on rewired graphs
+6) Saves a summary dataframe of rewired experiments
 
 Inputs:
 data/
-    graph.npz                      # {'adjs': List[np.ndarray]} - per-year adjacencies
-    labels.npz OR labels_{top}.npz # {'Labels': np.ndarray[t, n]} - per-year labels
-    features_{feature}.npz         # {'attmats': List[np.ndarray]} - optional per-year node features
-    train_mask_w{w}.npz, val_mask_w{w}.npz, test_mask_w{w}.npz   # {'Labels': np.ndarray[t, n]}
+    graph.npz                                                       # {'adjs': List[np.ndarray]} - per-year adjacencies
+    labels.npz OR labels_{top}.npz                                  # {'Labels': np.ndarray[t, n]} - per-year labels
+    features_{feature}.npz                                          # {'attmats': List[np.ndarray]} - optional per-year node features
+    train_mask_w{w}.npz, val_mask_w{w}.npz, test_mask_w{w}.npz      # {'Labels': np.ndarray[t, n]}
+    graph_{iter}_{pct_rewire}.npz                                   # {'adjs': List[np.ndarray]} - per-year rewired adjacencies
 
 Outputs:
-output/gml/y_{top}/{model}/{feature}/
-    sweep/config_sweep_{idx}.json         # one per sweep index
-    best_configs.csv                      # selected best configs (one row per (model,feature,class,weighted,top))
-    repeat/{classX_weightY}/run_{k}.csv   # metrics per repeat
-    repeat/{classX_weightY}/best_model_run{k}.pt
-    analysis/aggregates.csv               # grouped means/stds
+output/models_{feature}/y_{top}/{model}/
+    sweep/config_sweep_{idx}.json           # one per sweep index
+    best_configs.csv                        # selected best configs (one row per (model,feature,class,weighted,top))
+    repeat/run_{k}.csv                      # metrics per repeat
+    rewire/run_iter{iter}_pct{pct}.csv      # rewired results (one per iter + pct combo)
+    analysis/aggregates.csv                 # grouped means/stds
+outputs/y_{top}/
+    gml_aggregates.csv                      # aggregated GML results
+    gml_aggregates_ranked_by_mcc.csv        # results ranked by MCC
+    gml_aggregates_ranked_by_pr_auc.csv     # results ranked by PR-AUC
+    gml_aggregates_wide.csv                 # pivoted table with aggregated results
+    gml_combined_runs.csv                   # run-level results
+rewired_summary.csv                         # run-level rewiring results
 
-10/29/2025 - SD
+1/22/2026 - SD
 """
 
 import sys, json, os, itertools, copy
+import re
 from pathlib import Path
 from glob import glob
 import numpy as np
@@ -103,7 +114,7 @@ def ensure_dir(p):
     Path(p).mkdir(parents=True, exist_ok=True)
 
 
-def data_paths(data_dir, feature, window, top):
+def data_paths(data_dir, feature, window, top, graph_fp_override=None):
     """
     Creates a dictionary of data filepaths.
 
@@ -111,13 +122,16 @@ def data_paths(data_dir, feature, window, top):
     :param feature: Feature types
     :param window: Sliding window
     :param top: What y's to consider as High-rank
+    :param graph_fp_override: If provided, use this graph fp instead of data_dir/graph.npz
     :return: Dictionary with data filepaths.
     """
     labels_fp = os.path.join(data_dir, 'labels.npz' if top == 10 else f'labels_{top}.npz')
     features_fp = None if feature == 'none' else os.path.join(data_dir, f'features_{feature}.npz')
 
+    graph_fp = graph_fp_override if graph_fp_override is not None else os.path.join(data_dir, 'graph.npz')
+
     return {
-        'graph_fp':   os.path.join(data_dir, 'graph.npz'),
+        'graph_fp':   graph_fp,
         'labels_fp':  labels_fp,
         'features_fp': features_fp,
         'train_mask_fp': os.path.join(data_dir, f'train_mask_w{window}.npz'),
@@ -498,7 +512,7 @@ def parallelized_hyperparameter_sweep(model_name, feature_set, top, sweep_idx):
     :return: None
     """
     data_dir = DATA_DIR
-    out_dir = OUTPUT_DIR / f'models_{feature_set}' / model_name
+    out_dir = OUTPUT_DIR / f'models_{feature_set}'
     ensure_dir(out_dir)
 
     # Define the sweep space
@@ -521,7 +535,7 @@ def parallelized_hyperparameter_sweep(model_name, feature_set, top, sweep_idx):
     paths = data_paths(data_dir, feature_set, window, top)
 
     # Output paths
-    out_dir = out_dir / f"y_{top}" / model_name / feature_set / "sweep"
+    out_dir = out_dir / f"y_{top}" / model_name / "sweep"
     ensure_dir(out_dir)
 
     # Targets
@@ -545,7 +559,6 @@ def parallelized_hyperparameter_sweep(model_name, feature_set, top, sweep_idx):
 
         all_y_true, all_y_pred, all_y_probs = [], [], []
 
-        per_class_pr_auc = []
         for year in test_years:
             snapshot = get_snapshot_for_hire_year(year, dataset, graph_years)
             num_features = snapshot.x.shape[1]
@@ -554,7 +567,7 @@ def parallelized_hyperparameter_sweep(model_name, feature_set, top, sweep_idx):
             model = model_cls(num_features=num_features, hidden_channels=hidden_channels, num_classes=2, dropout=dropout)
 
             # Train
-            trained_model = train_static(snapshot, model, epochs=500, patience=500)
+            trained_model = train_static(snapshot, model, epochs=500, patience=50)
 
             # Evaluate
             mcc, precision, recall, f1, cm, pr_auc, y_true, y_pred, y_probs = evaluate_static(trained_model, snapshot)
@@ -650,8 +663,8 @@ def find_best_hyperparams(model_name, feature_set, top):
     :param top: what y's to consider as High-rank
     :return: None
     """
-    out_dir = OUTPUT_DIR / f'models_{feature_set}' / model_name
-    sweep_dir = out_dir / f"y_{top}" / model_name / feature_set / "sweep"
+    out_dir = OUTPUT_DIR / f'models_{feature_set}'
+    sweep_dir = out_dir / f"y_{top}" / model_name / "sweep"
 
     rows = []
     if not os.path.isdir(sweep_dir):
@@ -671,14 +684,15 @@ def find_best_hyperparams(model_name, feature_set, top):
     rows.sort(key=lambda r: (r.get("avg_pr_auc", 0.0), r.get("avg_mcc", 0.0)), reverse=True)
     best = rows[0]
 
-    out_dir = out_dir / f"y_{top}" / model_name / feature_set
+    out_dir = out_dir / f"y_{top}" / model_name
     ensure_dir(out_dir)
     best_csv = out_dir / "best_configs.csv"
 
     # save a dataframe with the best result per model+feature+top combination
     df = pd.DataFrame([{
-        "model": model_name,
-        "feature": feature_set,
+        "model_name": model_name,
+        "feature_set": feature_set,
+        "target_class": 0,
         "top": top,
         "window": best["window"],
         "weighted": best["weighted"],
@@ -705,8 +719,8 @@ def repeat_best_runs(model_name, feature_set, top, n_runs):
     """
 
     data_dir = DATA_DIR
-    out_dir = OUTPUT_DIR / f'models_{feature_set}' / model_name
-    best_csv = out_dir / f"y_{top}" / model_name / feature_set / "best_configs.csv"
+    out_dir = OUTPUT_DIR / f'models_{feature_set}'
+    best_csv = out_dir / f"y_{top}" / model_name / "best_configs.csv"
 
     if not os.path.isfile(best_csv):
         raise FileNotFoundError(f"Missing best CSV: {best_csv}. Run best_hyperparams experiment first.")
@@ -720,7 +734,7 @@ def repeat_best_runs(model_name, feature_set, top, n_runs):
     weighted = bool(row["weighted"])
 
     # Filepath to save
-    base_out = out_dir / f"y_{top}" / model_name / feature_set / "repeat" / f"class0_weight{weighted}"
+    base_out = out_dir / f"y_{top}" / model_name / "repeat"
     ensure_dir(base_out)
 
     # Data
@@ -780,19 +794,18 @@ def repeat_best_runs(model_name, feature_set, top, n_runs):
                 f1=precision_recall_fscore_support(all_y_true, all_y_pred, average='binary')[2],
                 pr_auc=average_precision_score(all_y_true, all_y_probs),
                 mcc=matthews_corrcoef(all_y_true, all_y_pred),
-                model=model_name,
-                feature=feature_set,
+                model_name=model_name,
+                feature_set=f'{feature_set}+graph',
                 run=run,
                 top=top,
                 weighted=weighted,
-                target_classes=0,
+                target_class=0,
             )
             pd.DataFrame([metrics]).to_csv(base_out / f"run_{run}.csv", index=False)
             print(f"[REPEAT] {model_name} {feature_set} run {run}: MCC={metrics['mcc']:.3f} PR-AUC={metrics['pr_auc']:.3f}")
 
         else:
             # model is temporal
-
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             test_year_indices = [graph_years.index(y) for y in test_years]
 
@@ -833,8 +846,8 @@ def repeat_best_runs(model_name, feature_set, top, n_runs):
             # save a results dataframe per run
             metrics = dict(
                 accuracy=accuracy, precision=precision, recall=recall, f1=f1, pr_auc=pr_auc, mcc=mcc,
-                model=model_name, feature=feature_set, run=run, top=top,
-                weighted=weighted, target_classes=0,
+                model_name=model_name, feature_set=f'{feature_set}+graph', run=run, top=top,
+                weighted=weighted, target_class=0,
             )
             pd.DataFrame([metrics]).to_csv(base_out / f"run_{run}.csv", index=False)
             print(f"[REPEAT] {model_name} {feature_set} run {run}: MCC={metrics['mcc']:.3f} PR-AUC={metrics['pr_auc']:.3f}")
@@ -857,35 +870,34 @@ def analyze_repeated_runs_for_top(top):
     rows = []
 
     feature_roots = sorted(glob(str(OUTPUT_DIR / "models_*")))
+
     for feat_root in feature_roots:
-        feature = os.path.basename(feat_root).split("models_", 1)[-1]
-        for model in os.listdir(feat_root):
-            model_dir = Path(feat_root) / model
-            if not os.path.isdir(model_dir):
+        feat_root = Path(feat_root)
+        feature = feat_root.name.split("models_", 1)[-1]
+
+        y_dir = feat_root / f"y_{top}"
+        if not y_dir.is_dir():
+            continue
+
+        for model in os.listdir(y_dir):
+
+            base = y_dir / model / "repeat"
+            if not base.is_dir():
                 continue
 
-            base = model_dir / f"y_{top}" / model / feature / "repeat"
-            if not os.path.isdir(base):
-                continue
+            for fname in os.listdir(base):
+                if fname.startswith("run_") and fname.endswith(".csv"):
+                    fp = base / fname
+                    try:
+                        df = pd.read_csv(fp)
+                    except Exception:
+                        continue
 
-            for group in os.listdir(base):
-                gdir = base / group
-                if not os.path.isdir(gdir):
-                    continue
-                for fname in os.listdir(gdir):
-                    if fname.startswith("run_") and fname.endswith(".csv"):
-                        fp = gdir / fname
-                        try:
-                            df = pd.read_csv(fp)
-                        except Exception:
-                            continue
-
-                        # Ensure required identifiers are present and correct
-                        df["model"] = model
-                        df["feature"] = feature
-                        df["group"] = group
-                        df["top"] = int(top)
-                        rows.append(df)
+                    # Ensure required identifiers are present and correct
+                    df["model"] = model
+                    df["feature"] = feature
+                    df["top"] = int(top)
+                    rows.append(df)
 
     if not rows:
         raise RuntimeError(f"No repeat CSVs found for top={top} under output/models_*/...")
@@ -902,8 +914,8 @@ def analyze_repeated_runs_for_top(top):
     # Aggregates
     agg = (
         df.groupby(["model", "feature", "top", "weighted", "target_classes"])
-          .agg(["mean", "std"])
-          .reset_index()
+        .agg(["mean", "std"])
+        .reset_index()
     )
     # Flatten MultiIndex columns
     agg.columns = [
@@ -935,23 +947,256 @@ def analyze_repeated_runs_for_top(top):
             wide.to_csv(out_root / "gml_aggregates_wide.csv", index=False)
 
     # Ranked tables (per model/top/weighted/target_classes)
-    rank_keys = ["model", "top", "weighted", "target_classes"]
-
     if "pr_auc_mean" in agg.columns:
-        ranked_auc = (
-            agg.sort_values(rank_keys + ["pr_auc_mean"], ascending=[True, True, True, True, False])
-               .assign(rank_by_pr_auc=lambda d: d.groupby(rank_keys)["pr_auc_mean"]
-                       .rank(ascending=False, method="dense"))
-        )
+        ranked_auc = agg.sort_values("pr_auc_mean", ascending=False)
         ranked_auc.to_csv(out_root / "gml_aggregates_ranked_by_pr_auc.csv", index=False)
 
+        print(ranked_auc[['model', 'feature', 'pr_auc_mean', 'pr_auc_std']])
+
     if "mcc_mean" in agg.columns:
-        ranked_mcc = (
-            agg.sort_values(rank_keys + ["mcc_mean"], ascending=[True, True, True, True, False])
-               .assign(rank_by_mcc=lambda d: d.groupby(rank_keys)["mcc_mean"]
-                       .rank(ascending=False, method="dense"))
-        )
+        ranked_mcc = agg.sort_values("mcc_mean", ascending=False)
         ranked_mcc.to_csv(out_root / "gml_aggregates_ranked_by_mcc.csv", index=False)
+
+
+def rewire(model_name, feature_set, top, pct_rewired, iteration):
+    """
+    Train on a rewired graph.
+
+    :param model_name: name of model
+    :param feature_set: feature set combo
+    :param top: what y's to consider as High-rank
+    :param pct_rewired: rewiring percentage
+    :param iteration: rewiring iteration
+    :return: None
+    """
+    data_dir = DATA_DIR
+    out_dir = OUTPUT_DIR / f"models_{feature_set}"
+
+    best_csv = out_dir / f"y_{top}" / model_name / "best_configs.csv"
+    if not os.path.isfile(best_csv):
+        raise FileNotFoundError(f"Missing best CSV: {best_csv}. Run best_hyperparams first.")
+
+    # Load hyperparameters from best run
+    row = pd.read_csv(best_csv).iloc[0]
+    hidden_channels = json.loads(row["hidden_channels"])
+    dropout = float(row["dropout"])
+    K = int(row["K"]) if ("K" in row.index and not pd.isna(row["K"])) else 3
+    window = int(row["window"])
+    weighted = bool(row["weighted"])
+
+    # Rewired graph filepath
+    graph_fp = os.path.join(data_dir, f"graph_{iteration}_{pct_rewired}.npz")
+    if not os.path.isfile(graph_fp):
+        raise FileNotFoundError(f"Missing rewired graph file: {graph_fp}")
+
+    # Output dir: rewire (not repeat)
+    base_out = out_dir / f"y_{top}" / model_name / "rewire"
+    ensure_dir(base_out)
+
+    # Data paths (override graph fp)
+    paths = data_paths(data_dir, feature_set, window, top, graph_fp_override=graph_fp)
+
+    # Years / targets
+    graph_years = list(range(2010, 2021))
+    test_years = [2018, 2019, 2020]
+    target_class = 0
+    model_kind = MODEL_REGISTRY[model_name]["kind"]
+
+    print(
+        f"[REWIRE_SETUP] model={model_name} feature={feature_set} top={top} "
+        f"iter={iteration} pct_rewired={pct_rewired} "
+        f"weighted={weighted} window={window} graph_fp={graph_fp}"
+    )
+
+    # Train + eval
+    if model_kind == "static":
+        dataset = transform_data(
+            model_name=model_name,
+            graph_fp=paths["graph_fp"],
+            features_fp=paths["features_fp"],
+            labels_fp=paths["labels_fp"],
+            train_mask_fp=paths["train_mask_fp"],
+            val_mask_fp=paths["val_mask_fp"],
+            test_mask_fp=paths["test_mask_fp"],
+            weighted=weighted,
+            target_class=target_class,
+            top=top,
+        )
+
+        all_y_true, all_y_pred, all_y_probs = [], [], []
+
+        for year in test_years:
+            snapshot = get_snapshot_for_hire_year(year, dataset, graph_years)
+            num_features = snapshot.x.shape[1]
+
+            model_cls = MODEL_REGISTRY[model_name]["class"]
+            model = model_cls(
+                num_features=num_features,
+                hidden_channels=hidden_channels,
+                num_classes=2,
+                dropout=dropout,
+            )
+
+            trained_model = train_static(snapshot, model, epochs=500, patience=50)
+
+            mcc_y, p_y, r_y, f1_y, cm, pr_auc_y, y_true, y_pred, y_probs = evaluate_static(trained_model, snapshot)
+            print(
+                f"  [YEAR] {year} | MCC={mcc_y:.3f} | P={p_y:.3f} | R={r_y:.3f} | "
+                f"F1={f1_y:.3f} | PR-AUC={pr_auc_y:.3f}"
+            )
+
+            all_y_true.append(y_true)
+            all_y_pred.append(y_pred)
+            all_y_probs.append(y_probs)
+
+        all_y_true = np.concatenate(all_y_true)
+        all_y_pred = np.concatenate(all_y_pred)
+        all_y_probs = np.concatenate(all_y_probs)
+
+        pr_auc = float(average_precision_score(all_y_true, all_y_probs))
+        mcc = float(matthews_corrcoef(all_y_true, all_y_pred))
+        accuracy = float(accuracy_score(all_y_true, all_y_pred))
+        precision = float(precision_recall_fscore_support(all_y_true, all_y_pred, average="binary")[0])
+        recall = float(precision_recall_fscore_support(all_y_true, all_y_pred, average="binary")[1])
+        f1 = float(precision_recall_fscore_support(all_y_true, all_y_pred, average="binary")[2])
+
+    else:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        test_year_indices = [graph_years.index(y) for y in test_years]
+
+        temporal_data = transform_data(
+            model_name="GConvGRU",
+            graph_fp=paths["graph_fp"],
+            features_fp=paths["features_fp"],
+            labels_fp=paths["labels_fp"],
+            train_mask_fp=paths["train_mask_fp"],
+            val_mask_fp=paths["val_mask_fp"],
+            test_mask_fp=paths["test_mask_fp"],
+            weighted=weighted,
+            target_class=0,
+            top=top,
+        )
+
+        in_channels = temporal_data[0].x.shape[1]
+        model_cls = MODEL_REGISTRY[model_name]["class"]
+        model = model_cls(
+            in_channels=in_channels,
+            out_channels=2,
+            K=K,
+            hidden_channels=hidden_channels,
+        ).to(device)
+
+        for snapshot in temporal_data:
+            snapshot.x = snapshot.x.to(device)
+            snapshot.edge_index = snapshot.edge_index.to(device)
+            snapshot.edge_weight = snapshot.edge_weight.to(device)
+            snapshot.y = snapshot.y.to(device)
+            snapshot.train_mask = snapshot.train_mask.to(device)
+            snapshot.val_mask = snapshot.val_mask.to(device)
+            snapshot.test_mask = snapshot.test_mask.to(device)
+
+        train_temporal_data = [snap for i, snap in enumerate(temporal_data) if i not in test_year_indices]
+        trained_model = train_temporal(train_temporal_data, model, device=device, epochs=500)
+
+        mcc, precision, recall, f1, pr_auc, accuracy = evaluate_temporal(trained_model, temporal_data, test_year_indices)
+        pr_auc = float(pr_auc)
+        mcc = float(mcc)
+        precision = float(precision)
+        recall = float(recall)
+        f1 = float(f1)
+        accuracy = float(accuracy)
+
+        print(
+            f"  [TEMP] PR-AUC={pr_auc:.3f} | MCC={mcc:.3f} | P={precision:.3f} | "
+            f"R={recall:.3f} | F1={f1:.3f} | Acc={accuracy:.3f}"
+        )
+
+    # Save metrics CSV (one per job)
+    metrics = dict(
+        accuracy=accuracy,
+        precision=precision,
+        recall=recall,
+        f1=f1,
+        pr_auc=pr_auc,
+        mcc=mcc,
+        model_name=model_name,
+        feature_set=f'{feature_set}+graph',
+        top=int(top),
+        weighted=bool(weighted),
+        target_class=0,
+        pct_rewired=float(pct_rewired),
+        iteration=int(iteration),
+        graph_fp=str(graph_fp),
+        window=int(window),
+        hidden_channels=json.dumps(hidden_channels),
+        dropout=float(dropout),
+        K=int(K) if model_kind != "static" else None,
+    )
+
+    out_csv = base_out / f"run_iter{iteration}_pct{pct_rewired}.csv"
+    pd.DataFrame([metrics]).to_csv(out_csv, index=False)
+
+
+def analyze_rewire():
+    """
+    Reads results from all rewired experiments and aggregates into a summary CSV.
+
+    :return: None
+    """
+
+    rows = []
+
+    for feat in ['cv', 'bib', 'cv+bib']:
+        feat_dir = OUTPUT_DIR / f'models_{feat}' / 'y_10'
+        if not feat_dir.exists():
+            continue
+
+        for model in ['GCN', 'GAT', 'GraphSAGE', 'GConvGRU']:
+            rewire_dir = feat_dir / model / 'rewire'
+            if not rewire_dir.exists():
+                continue
+
+            # Read all run_*.csv inside that folder
+            for fp in sorted(rewire_dir.glob("run_iter*_pct*.csv")):
+                try:
+                    df = pd.read_csv(fp)
+                except Exception:
+                    continue
+
+                if df.empty:
+                    continue
+
+                # Ensure the identifiers exist even if something got dropped
+                df["model_name"] = df.get("model", model)
+                df["feature_set"] = df.get("feature", feat)
+
+                # percent is called pct_rewired in your rewire() output
+                if "pct_rewired" in df.columns:
+                    df["percent"] = df["pct_rewired"]
+                elif "percent" not in df.columns:
+                    # Try to parse from filename as fallback
+                    m = re.search(r"pct([0-9.]+)", fp.name)
+                    df["percent"] = m.group(1) if m else None
+
+                # iteration is explicitly in the CSV, but also parseable from filename
+                if "iteration" not in df.columns:
+                    m = re.search(r"iter([0-9]+)", fp.name)
+                    df["iteration"] = int(m.group(1)) if m else None
+
+                rows.append(df)
+
+    if not rows:
+        raise SystemExit(
+            f"No rewiring CSVs found under {OUTPUT_DIR}/models_*/y_10/*/rewire/.\n"
+            "Double-check --output-dir and --top."
+        )
+
+    df = pd.concat(rows, ignore_index=True)
+
+    # Save the analysis file
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_fp = OUTPUT_DIR / "rewired_summary.csv"
+    df.to_csv(out_fp, index=False)
 
 
 def main():
@@ -966,6 +1211,10 @@ def main():
         Retrains the best hyperparameter combination of model + feature set + top combination n_runs times
     4) analyze_repeated_runs
         Creates summary dataframes with results from best repeated runs
+    5) rewire
+        Runs experiments on rewired graphs
+    6) analyze_rewire
+        Creates summary dataframe with results from rewired experiments
 
     :return: None
     """
@@ -1030,6 +1279,34 @@ def main():
         top = int(sys.argv[2])
 
         analyze_repeated_runs_for_top(top)
+
+    # to train on rewired graphs
+    elif experiment == "rewire":
+        if len(sys.argv) < 7:
+            print("Usage: python graph_ml.py rewire_best <model_name> <feature_set> <top> <pct_rewired> <iteration>")
+            sys.exit(1)
+
+        model_name = sys.argv[2]
+        feature_set = sys.argv[3]
+        top = int(sys.argv[4])
+        pct_rewired = sys.argv[5]
+        iteration = int(sys.argv[6])
+
+        rewire(
+            model_name=model_name,
+            feature_set=feature_set,
+            top=top,
+            pct_rewired=pct_rewired,
+            iteration=iteration,
+        )
+
+    # to analyze rewired experiments
+    elif experiment == "analyze_rewire":
+        if len(sys.argv) != 2:
+            print("Usage: python graph_ml.py analyze_rewire")
+            sys.exit(1)
+
+        analyze_rewire()
 
     else:
         raise NotImplementedError

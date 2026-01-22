@@ -20,3 +20,4 @@ pre_num_high_faculty_papers
 pre_prop_high_faculty_papers
 pre_num_med_faculty_papers
 pre_prop_med_faculty_papers
+citations
