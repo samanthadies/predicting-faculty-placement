@@ -47,7 +47,7 @@ repo/
 │  │  ├─ GAT.py
 │  │  ├─ GCN.py
 │  │  ├─ GraphSAGE.py
-│  │  ├─ RecurrentGCN.py      # temporal model (aka GConvGRU style)
+│  │  ├─ RecurrentGCN.py      # temporal model (GConvGRU)
 │  │  └─ TabTransformer.py
 │  ├─ build_graph.py
 │  ├─ get_coauthorship_features.py
@@ -56,6 +56,7 @@ repo/
 │  ├─ tabular_ml.py
 │  ├─ graph_ml.py
 │  ├─ explicit_baselines.py
+│  ├─ feature_disentangling.py
 │  ├─ stats.py
 │  ├─ plot.py
 │  └─ rewire.py
@@ -127,6 +128,7 @@ Run from `scripts/`:
 - **Baselines:** `explicit_baselines.py`  
 - **Stats:** `stats.py`
 - **Figures:** `plot.py`
+- **Feature Analysis:** `feature_disentangling.py`
 
 ### 5) Other
 - **Degree-preserving rewiring experiments:** `rewire.py`
@@ -153,7 +155,7 @@ python collect_data/format_dblp.py
 python collect_data/infer_gender.py
 ```
 
-#### Collect citations (noe: involves manually collecting a subset)
+#### Collect citations (note: involves manually collecting a subset)
 ```
 python collect_data/collect_citations.py
 ```
@@ -169,13 +171,15 @@ python prep_for_gml.py
 #### Tabular models
 `python tabular_ml.py`
 
-#### Graph models (example: GCN, bibliometric features, top=20)
+#### Graph models (example: GCN, bibliometric features, top=20, rewiring percent=100)
 This script is parallelized so that each iteration trains a single model based on command-line inputs.
 ```
 python graph_ml.py hyperparam_sweep GCN biblio 20 0
 python graph_ml.py best_hyperparams GCN biblio 20
 python graph_ml.py repeat_best GCN biblio 20 10
 python graph_ml.py analyze_repeated_runs 20
+python graph_ml.py rewire GCN biblio 100 0
+python graph_ml.py analyze_rewire
 ```
 
 #### Evaluation
@@ -183,6 +187,7 @@ python graph_ml.py analyze_repeated_runs 20
 python explicit_baselines.py
 python stats.py
 python plot.py
+python feature_disentanglement.py
 ```
 
 ---
@@ -204,21 +209,28 @@ output/
 │  ├─ gml_aggregates_ranked_by_pr_auc.csv
 │  └─ gml_aggregates_ranked_by_mcc.csv
 ├─ models_biblio/
-│  └─ GCN/
-│     └─ y_20/
-│        ├─ sweep/
-│        ├─ best_configs.csv
+│  └─ y_20/
+│     └─ GCN /
 │        ├─ repeat/
-│        └─ analysis/
+│        ├─ rewire/
+│        ├─ sweep/
+│        └─ best_configs.csv
 ├─ stats/
-│  ├─ mixed_effects_*.txt
+│  └─ mixed_effects_*.txt
+├─ features/
+│  ├─ spearman_corr_all_features.csv
+│  ├─ vif_cv.csv
+│  ├─ vif_bib.csv
+│  ├─ vif_cv_plus_bib.csv
+│  └─ feature_distribution_metrics.pdf
 ├─ plots/
 │  ├─ barplot_y_*.pdf
 │  ├─ boxplot_y_*.pdf
 │  ├─ rewired.pdf
+│  ├─ spearman_corr_heatmap_all.pdf
 │  └─ lineplot_summary.pdf
 └─ rewired/
-   └─ rewired_no_graph_feats_summary.csv
+   └─ rewire_summary.csv
 ```
 
 ---
