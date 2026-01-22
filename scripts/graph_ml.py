@@ -958,13 +958,12 @@ def analyze_repeated_runs_for_top(top):
         ranked_mcc.to_csv(out_root / "gml_aggregates_ranked_by_mcc.csv", index=False)
 
 
-def rewire(model_name, feature_set, top, pct_rewired, iteration):
+def rewire(model_name, feature_set, pct_rewired, iteration):
     """
     Train on a rewired graph.
 
     :param model_name: name of model
     :param feature_set: feature set combo
-    :param top: what y's to consider as High-rank
     :param pct_rewired: rewiring percentage
     :param iteration: rewiring iteration
     :return: None
@@ -972,7 +971,7 @@ def rewire(model_name, feature_set, top, pct_rewired, iteration):
     data_dir = DATA_DIR
     out_dir = OUTPUT_DIR / f"models_{feature_set}"
 
-    best_csv = out_dir / f"y_{top}" / model_name / "best_configs.csv"
+    best_csv = out_dir / "y_10" / model_name / "best_configs.csv"
     if not os.path.isfile(best_csv):
         raise FileNotFoundError(f"Missing best CSV: {best_csv}. Run best_hyperparams first.")
 
@@ -990,23 +989,17 @@ def rewire(model_name, feature_set, top, pct_rewired, iteration):
         raise FileNotFoundError(f"Missing rewired graph file: {graph_fp}")
 
     # Output dir: rewire (not repeat)
-    base_out = out_dir / f"y_{top}" / model_name / "rewire"
+    base_out = out_dir / "y_10" / model_name / "rewire"
     ensure_dir(base_out)
 
     # Data paths (override graph fp)
-    paths = data_paths(data_dir, feature_set, window, top, graph_fp_override=graph_fp)
+    paths = data_paths(data_dir, feature_set, window, 10, graph_fp_override=graph_fp)
 
     # Years / targets
     graph_years = list(range(2010, 2021))
     test_years = [2018, 2019, 2020]
     target_class = 0
     model_kind = MODEL_REGISTRY[model_name]["kind"]
-
-    print(
-        f"[REWIRE_SETUP] model={model_name} feature={feature_set} top={top} "
-        f"iter={iteration} pct_rewired={pct_rewired} "
-        f"weighted={weighted} window={window} graph_fp={graph_fp}"
-    )
 
     # Train + eval
     if model_kind == "static":
@@ -1020,7 +1013,7 @@ def rewire(model_name, feature_set, top, pct_rewired, iteration):
             test_mask_fp=paths["test_mask_fp"],
             weighted=weighted,
             target_class=target_class,
-            top=top,
+            top=10,
         )
 
         all_y_true, all_y_pred, all_y_probs = [], [], []
@@ -1074,7 +1067,7 @@ def rewire(model_name, feature_set, top, pct_rewired, iteration):
             test_mask_fp=paths["test_mask_fp"],
             weighted=weighted,
             target_class=0,
-            top=top,
+            top=10,
         )
 
         in_channels = temporal_data[0].x.shape[1]
@@ -1121,7 +1114,7 @@ def rewire(model_name, feature_set, top, pct_rewired, iteration):
         mcc=mcc,
         model_name=model_name,
         feature_set=f'{feature_set}+graph',
-        top=int(top),
+        top=int(10),
         weighted=bool(weighted),
         target_class=0,
         pct_rewired=float(pct_rewired),
@@ -1195,7 +1188,7 @@ def analyze_rewire():
 
     # Save the analysis file
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    out_fp = OUTPUT_DIR / "rewired_summary.csv"
+    out_fp = OUTPUT_DIR / "rewired" / "rewired_summary.csv"
     df.to_csv(out_fp, index=False)
 
 
@@ -1282,20 +1275,18 @@ def main():
 
     # to train on rewired graphs
     elif experiment == "rewire":
-        if len(sys.argv) < 7:
-            print("Usage: python graph_ml.py rewire_best <model_name> <feature_set> <top> <pct_rewired> <iteration>")
+        if len(sys.argv) < 6:
+            print("Usage: python graph_ml.py rewire_best <model_name> <feature_set> <pct_rewired> <iteration>")
             sys.exit(1)
 
         model_name = sys.argv[2]
         feature_set = sys.argv[3]
-        top = int(sys.argv[4])
-        pct_rewired = sys.argv[5]
-        iteration = int(sys.argv[6])
+        pct_rewired = sys.argv[4]
+        iteration = int(sys.argv[5])
 
         rewire(
             model_name=model_name,
             feature_set=feature_set,
-            top=top,
             pct_rewired=pct_rewired,
             iteration=iteration,
         )

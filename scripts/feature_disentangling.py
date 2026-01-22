@@ -21,6 +21,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "output"
+FEATS_DIR = OUTPUT_DIR / "features"
 PLOTS_DIR = OUTPUT_DIR / "plots"
 
 
@@ -175,7 +176,7 @@ def correlations(X, all_feats):
     corr = compute_spearman_corr(X)
 
     # Save correlation matrix
-    corr_csv = os.path.join(PLOTS_DIR, "spearman_corr_all_features.csv")
+    corr_csv = os.path.join(FEATS_DIR, "spearman_corr_all_features.csv")
     corr.to_csv(corr_csv)
 
     # Heatmap
@@ -267,9 +268,9 @@ def multicollinearity(all_feats, cv_feats, bib_feats):
     vif_bib = compute_vif_table(faculty_df, bib_feats)
     vif_all = compute_vif_table(faculty_df, all_feats)
 
-    out_cv = os.path.join(PLOTS_DIR, f"vif_cv.csv")
-    out_bib = os.path.join(PLOTS_DIR, f"vif_bib.csv")
-    out_all = os.path.join(PLOTS_DIR, f"vif_cv_plus_bib.csv")
+    out_cv = os.path.join(FEATS_DIR, f"vif_cv.csv")
+    out_bib = os.path.join(FEATS_DIR, f"vif_bib.csv")
+    out_all = os.path.join(FEATS_DIR, f"vif_cv_plus_bib.csv")
 
     vif_cv.to_csv(out_cv, index=False)
     vif_bib.to_csv(out_bib, index=False)
@@ -390,12 +391,13 @@ def feature_distribution_stats(cv_feats, bib_feats):
         })
 
     df_dist = pd.DataFrame(dist_rows)
-    out_dist_csv = os.path.join(PLOTS_DIR, "feature_distribution_metrics.csv")
+    out_dist_csv = os.path.join(FEATS_DIR, "feature_distribution_metrics.csv")
     df_dist.to_csv(out_dist_csv, index=False)
 
 
 def main():
     ensure_dir(OUTPUT_DIR)
+    ensure_dir(FEATS_DIR)
     ensure_dir(PLOTS_DIR)
 
     # Load
