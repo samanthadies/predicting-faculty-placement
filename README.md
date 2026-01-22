@@ -41,6 +41,7 @@ repo/
 │  │  ├─ XMLToCSV.py
 │  │  ├─ scrape.py
 │  │  ├─ infer_gender.py
+│  │  ├─ collect_citations.py
 │  │  └─ format_dblp.py
 │  ├─ models/
 │  │  ├─ GAT.py
@@ -101,6 +102,9 @@ Run from `scripts/`:
    Infers gender using labels from SOTA proprietary APIs, Gender-API [4] and genderize.io [5].
    If Gender-API and genderize.io both have confidence >= 0.8 and agree, we use that gender label.
    Otherwise, we manually label the gender.
+- **Collect citations:** `collect_data/collect_citations.py`
+   Collects annual citation counts from OpenAlex [6].
+   If we cannot find an OpenAlex profile using existing information, we manually collect citation counts.
 
 ### 2) Format Data
 - **Build graphs & splits:** `build_graph.py`  
@@ -142,6 +146,16 @@ python collect_data/scrape.py
 ```
 python collect_data/XMLToCSV.py dblp.xml dblp.dtd ../data/coauthorship/dblp_raw/ --annotate
 python collect_data/format_dblp.py
+```
+
+#### Gender label (note: involves manually labeling a subset)
+```
+python collect_data/infer_gender.py
+```
+
+#### Collect citations (noe: involves manually collecting a subset)
+```
+python collect_data/collect_citations.py
 ```
 
 #### Build graphs & features
@@ -220,6 +234,8 @@ output/
 [4] [https://gender-api.com](https://gender-api.com).
 
 [5] [https://genderize.io](https://genderize.io).
+
+[6] [https://api.openalex.org](https://api.openalex.org).
 
 If you use this codebase or reproduce its analyses, please cite:
 > Dies, Samantha, David Liu, and Tina Eliassi-Rad. *Forecasting Faculty Placement from Patterns in Co-authorship Networks*.
