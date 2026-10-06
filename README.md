@@ -10,8 +10,7 @@ If you found this code useful for your own research, please cite our paper.
   author={Dies, Samantha and Liu, David M and Eliassi-Rad, Tina},
   journal={EPJ Data Science},
   volume={15},
-  number={1},
-  pages={41},
+  number={41},
   year={2026},
   doi={10.1140/epjds/s13688-026-00638-1},
   publisher={Springer}
@@ -256,4 +255,4 @@ output/
 
 If you use this codebase or reproduce its analyses, please cite:
 > Dies, Samantha, David Liu, and Tina Eliassi-Rad. Forecasting Faculty Placement from Patterns in Co-authorship Networks.
-_EPJ Data Science_ 15.1 (2026):41.
+_EPJ Data Science_ 15.41 (2026).
