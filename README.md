@@ -255,5 +255,5 @@ output/
 [6] [https://api.openalex.org](https://api.openalex.org).
 
 If you use this codebase or reproduce its analyses, please cite:
-> Dies, Samantha, David Liu, and Tina Eliassi-Rad. *Forecasting Faculty Placement from Patterns in Co-authorship Networks*.
-arXiv preprint arXiv:2507.14696 (2025).
+> Dies, Samantha, David Liu, and Tina Eliassi-Rad. Forecasting Faculty Placement from Patterns in Co-authorship Networks.
+_EPJ Data Science_ 15.1 (2026):41.
