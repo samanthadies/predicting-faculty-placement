@@ -4,12 +4,17 @@ This repository contains the end-to-end pipeline used in our paper: data collect
 
 If you found this code useful for your own research, please cite our paper.
 
-```bibtex
-@article{dies2025forecasting,
-  title={Forecasting Faculty Placement from Patterns in Co-authorship Networks},
-  author={Dies, Samantha and Liu, David and Eliassi-Rad, Tina},
-  journal={arXiv preprint arXiv:2507.14696},
-  year={2025}
+```
+@article{dies2026forecasting,
+  title={Forecasting faculty placement from patterns in coauthorship networks},
+  author={Dies, Samantha and Liu, David M and Eliassi-Rad, Tina},
+  journal={EPJ Data Science},
+  volume={15},
+  number={1},
+  pages={41},
+  year={2026},
+  doi={10.1140/epjds/s13688-026-00638-1},
+  publisher={Springer}
 }
 ```
 ---
